@@ -115,3 +115,14 @@ The initial import deliberately excludes the private commercial server, user acc
 - shared domain/provider/UI packages;
 - physical-device macOS UI validation beyond GitHub-hosted arm64/x64 packaging and smoke checks;
 - a true standalone application under `apps/standalone`.
+# 2026-09-30 reliability recovery
+
+Protocol sources: https://tuzi-api.apifox.cn/343646956e0, https://tuzi-api.apifox.cn/472418522e0, and https://wiki.tu-zi.com/s/8c61a536-7a59-4410-a5e2-8dab3d041958/doc/gemini-3-pro-image-preview-api-wCmFtI3Tm5.
+
+The current Tuzi contract supersedes the earlier video routing above. Flash image preview and synchronous Pro/Nano Banana aliases submit JSON to `/v1/images/generations`, with ratio sizes such as `9x16`, lowercase resolution quality and URL results. Explicit Pro async models and GPT-Image 2 submit multipart to `/v1/videos`, repeat `input_reference`, and leave multipart Content-Type to the transport. Pro async uses colon ratios and model resolution suffixes; GPT-Image 2 retains pixel sizes. `processing` maps to `in_progress`. Persisted `task.protocol` still controls recovery, including legacy `/get-async`, without new submissions. This adaptation has documentation and offline contract coverage only; no real Tuzi API request has been made.
+
+The Sidecar now deduplicates concurrent create/append/modify requests before asynchronous model resolution and persists request fingerprints to reject conflicting replays. Reference imports share the image-library write queue. Provider request IDs remain metadata; new output folders use local UUIDs, and unsafe historical library paths are quarantined while healthy history is retained.
+
+Both the Plugin and Sidecar catch initial job-persistence failures inside the job lifecycle. Sidecar running/retrieval bookkeeping is released even if final persistence fails; Plugin scheduler promises observe failures without unhandled rejection. Offline failure injection covers start, provider-task update, and completion, followed by another successful queued request.
+
+Batch merge now moves terminal source jobs and their image versions and call history into one target. Both implementations first commit the target with a durable source-cleanup receipt, hide the source batches, remap source create keys to the target, and replay cleanup after a restart or the same merge request. A target-save failure leaves sources intact. Source-cleanup or receipt-finalization failure retains the receipt, preventing duplicate import or premature target deletion. The Sidecar keeps image IDs and prepares target folder links before removing managed source links; the Plugin copies managed source paths and preserves files still referenced by another batch. The obsolete `deleteSourceBatches` argument is accepted but cannot restore keep-source behavior.
